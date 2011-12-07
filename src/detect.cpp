@@ -19,7 +19,7 @@ using namespace cv;
 using namespace cv_bridge;
 
 #define MAX_FACES 20
-#define TOPIC_CONTROL "/recognizer/output"
+#define TOPIC_CONTROL "/cmd_state"
 #ifdef RGB
 IplImage* img = cvCreateImage( cvSize(640,480),IPL_DEPTH_8U, 3 );
 #else
@@ -126,8 +126,8 @@ void controlCallBack(const std_msgs::String::ConstPtr& msg)
       learn();
       return ;
     }
-  if(strcmp(msg->data.c_str(),"one")!=0 && strcmp(msg->data.c_str(),"peter")!=0)
-     return ;
+  /*if(strcmp(msg->data.c_str(),"one")!=0 && strcmp(msg->data.c_str(),"peter")!=0)
+     return ;*/
   chkSave = 1;
   FILE * imgListFile;
   // open the input file
@@ -257,6 +257,7 @@ IplImage * detect_face(char filename[]){
     {
       chkSave = 0;
       faceCount = 0;
+	learn();
     }
 
 
