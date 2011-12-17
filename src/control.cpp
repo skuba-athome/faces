@@ -9,7 +9,7 @@ int main(int argc, char **argv)
   char s[100];
   ros::init(argc, argv, "talker");
   ros::NodeHandle n;
-  ros::Publisher control_pub = n.advertise<std_msgs::String>("control", 10);
+  ros::Publisher control_pub = n.advertise<std_msgs::String>("cmd_state", 10);
 
   ros::Rate loop_rate(10);
   while (ros::ok())
