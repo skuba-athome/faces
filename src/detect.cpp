@@ -12,6 +12,7 @@
 #include <string.h>
 #include <cxcore.h>
 #include <cvaux.h>
+#include <stdlib.h>
 
 //#define RGB
 using namespace std;
@@ -44,7 +45,7 @@ int nNames = 0;
 char name[100];
 double min_range_;
 double max_range_;
-float dist[640][480];
+float dist[480][640];
 int canPrintDepth = 0;
 
 void convertmsg2img(const sensor_msgs::ImageConstPtr& msg);
@@ -175,7 +176,8 @@ int main(int argc,char * argv[])
   while( fgets(tmp, 512, imgListFile) ) ++nNames;
 
   printf("pass\n");
-
+  learn();
+  system("espeak --stdout \'Ready\' | aplay");
   ros::spin();
 }
 
@@ -209,7 +211,6 @@ IplImage * detect_face(char filename[]){
 
   CvSeq* faces = cvHaarDetectObjects( img , cascade , storage , 1.1 , 2 , CV_HAAR_DO_CANNY_PRUNING , cvSize(60,60));
 
-  // หาหน้าที่ใกล้ที่สุด ... ตอนนี้ใช้เลือกหน้าที่ใหญ่สุดในภาพไปก่อน .. เพราะยังหาค่า depth ไม่ได้ ><
   float f_min = 4.0f;
   for ( int i=0;i<( faces ? faces->total:0);i++)
   {;
@@ -412,6 +413,18 @@ void recognize()
                 nearest  = trainPersonNumMat->data.i[iNearest];
 
                 printf("nearest = %d, Truth = %d\n", nearest, truth);
+		//   "espeak --stdout \'" + sp + "' | aplay"
+			char name[100];
+			int num_tmp;
+			FILE *fp = fopen("data/names.txt", "r");
+			for(int fi=0;fi<nearest;fi++)			
+				fscanf(fp, "%d %s", &num_tmp , name);	// read number of objects
+			fclose(fp);
+			printf("your name is name : %s\n",name);
+			char cmd[1024];
+			sprintf(cmd,  "espeak --stdout \' %s \' | aplay", name);
+			system(cmd);
+
         }
 }
 
@@ -448,7 +461,16 @@ void recognize_realtime()
 
 
           printf("nearest = %d, Truth = %d\n", nearest, truth);
-
+	char name[100];
+	int num_tmp;
+	FILE *fp = fopen("data/names.txt", "r");
+	for(int fi=0;fi<=nearest;fi++)			
+		fscanf(fp, "%d %s", &num_tmp , name);	// read number of objects
+	fclose(fp);
+	printf("your name is name : %s\n",name);
+	char cmd[1024];
+	sprintf(cmd,  "espeak --stdout -s 150 \' your name is %s \' | aplay", name);
+	system(cmd);
 }
 
 
