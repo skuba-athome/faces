@@ -1,5 +1,4 @@
 #include <ros/ros.h>
-//#include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/image_encodings.h>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -48,6 +47,10 @@ double max_range_;
 float dist[480][640];
 int canPrintDepth = 0;
 
+int g_nearest[20];
+int g_count = 0;
+int is_recog = 0;
+
 void convertmsg2img(const sensor_msgs::ImageConstPtr& msg);
 IplImage * detect_face(char filename[]);
 //// Function prototypes
@@ -67,14 +70,17 @@ void recognize_realtime();
 void kinectCallBack(const sensor_msgs::ImageConstPtr& msg)
 {
   //ROS_INFO("[%d] [%d]",msg->width,msg->height);
-  convertmsg2img(msg);
-  cvEqualizeHist(img,img);
-  detect_face("haarcascade_frontalface_alt.xml");
-
+  	convertmsg2img(msg);
+  	cvEqualizeHist(img,img);
+  	detect_face("haarcascade_frontalface_alt.xml");
   // show image
-  cvShowImage("test",img);
+  	if(is_recog){
+		g_count++;
+	    recognize_realtime();
+	}
+  	cvShowImage("test",img);
 
-  cv::waitKey(10);
+  	cv::waitKey(10);
 }
 
 void depthCb( const sensor_msgs::ImageConstPtr& image )
@@ -119,7 +125,7 @@ void controlCallBack(const std_msgs::String::ConstPtr& msg)
 
   if(!strcmp(msg->data.c_str(),"test"))
   {
-    recognize_realtime();
+ 	is_recog = 1; 
     return ;
   }
   if(!strcmp(msg->data.c_str(),"target"))
@@ -264,7 +270,7 @@ IplImage * detect_face(char filename[]){
 
   }
 
-  cvShowImage("face",faceImg);
+ // cvShowImage("face",faceImg);
   t = (double)cvGetTickCount() - t ;
   // clear memory
   if(storage) cvReleaseMemStorage(&storage);
@@ -459,18 +465,33 @@ void recognize_realtime()
           truth    = personNumTruthMat->data.i[i];
           nearest  = trainPersonNumMat->data.i[iNearest];
 
-
-          printf("nearest = %d, Truth = %d\n", nearest, truth);
-	char name[100];
-	int num_tmp;
-	FILE *fp = fopen("data/names.txt", "r");
-	for(int fi=0;fi<=nearest;fi++)			
-		fscanf(fp, "%d %s", &num_tmp , name);	// read number of objects
-	fclose(fp);
-	printf("your name is name : %s\n",name);
-	char cmd[1024];
-	sprintf(cmd,  "espeak --stdout -s 150 \' your name is %s \' | aplay", name);
-	system(cmd);
+	printf("nearest = %d, Truth = %d\n", nearest, truth);
+	g_nearest[nearest]++;
+	if(g_count == 10){
+		int index_max=0;
+		int max = -1;
+		for(int i = 0 ; i< 10 ; i++)
+		{
+			if(g_nearest[i] > max)
+			{
+				max = g_nearest[i];
+				index_max = i;
+			}
+		}
+		char name[100];
+		int num_tmp;
+		FILE *fp = fopen("data/names.txt", "r");
+		for(int fi=0;fi<=index_max;fi++)			
+			fscanf(fp, "%d %s", &num_tmp , name);	// read number of objects
+		fclose(fp);
+		printf("your name is name : %s\n",name);
+		char cmd[1024];
+		sprintf(cmd,  "espeak --stdout -s 150 \' your name is %s \' | aplay", name);
+		system(cmd);
+		is_recog = 0;
+		g_count = 0;
+		for(int i =0;i<10;i++)	g_nearest[i]=0;
+	}
 }
 
 
