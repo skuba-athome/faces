@@ -50,6 +50,7 @@ int canPrintDepth = 0;
 int g_nearest[20];
 int g_count = 0;
 int is_recog = 0;
+int is_init = 0;
 
 void convertmsg2img(const sensor_msgs::ImageConstPtr& msg);
 IplImage * detect_face(char filename[]);
@@ -184,6 +185,7 @@ int main(int argc,char * argv[])
   printf("pass\n");
   learn();
   system("espeak --stdout \'Ready\' | aplay");
+  is_init = 1;
   ros::spin();
 }
 
@@ -379,7 +381,9 @@ void learn()
         }
 
         // store the recognition data as an xml file
-        storeTrainingData();
+    storeTrainingData();
+	if(is_init)
+    	system("espeak --stdout \'now i remember you\' | aplay");
 }
 
 
