@@ -198,7 +198,12 @@ void convertmsg2img(const sensor_msgs::ImageConstPtr& msg)
             img->imageData[i*3+1] = msg->data[i*3+1];
             img->imageData[i*3+2] = msg->data[i*3];
 #else
+		if( dist[i/640][i%640] < 2.0f || 1){
             img->imageData[i] = msg->data[i];
+		}else
+		{
+			img->imageData[i] = 0;
+		}
 #endif
     }
 }
@@ -226,6 +231,7 @@ IplImage * detect_face(char filename[]){
           if( dist[tmp->y+tmp->height/2][tmp->x+tmp->width/2] < f_min )
           {
             r = tmp;
+			f_min = dist[tmp->y+tmp->height/2][tmp->x+tmp->width/2]; 
           }
   }
 
