@@ -183,7 +183,7 @@ int main(int argc,char * argv[])
   while( fgets(tmp, 512, imgListFile) ) ++nNames;
 
   printf("pass\n");
-  learn();
+  //learn();
   system("espeak --stdout \'Ready\' | aplay");
   is_init = 1;
   ros::spin();
