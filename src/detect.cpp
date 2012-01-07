@@ -20,11 +20,8 @@ using namespace cv_bridge;
 
 #define MAX_FACES 20
 #define TOPIC_CONTROL "/cmd_state"
-#ifdef RGB
-IplImage* img = cvCreateImage( cvSize(640,480),IPL_DEPTH_8U, 3 );
-#else
+IplImage* imgRGB = cvCreateImage( cvSize(640,480),IPL_DEPTH_8U, 3 );
 IplImage* img = cvCreateImage( cvSize(640,480),IPL_DEPTH_8U, 1 );
-#endif
 cv::Mat depthImg ;
 cv_bridge::CvImagePtr bridge;
 
@@ -81,7 +78,7 @@ void kinectCallBack(const sensor_msgs::ImageConstPtr& msg)
 	    recognize_realtime();
 	}
   	cvShowImage("test",img);
-
+	cvShowImage("RGB",imgRGB);
   	cv::waitKey(10);
 }
 
@@ -163,11 +160,8 @@ int main(int argc,char * argv[])
   nh.param("min_range", min_range_, 0.5);
   nh.param("max_range", max_range_, 5.5);
 
-#ifdef RGB
   ros::Subscriber sub = n.subscribe("/camera/rgb/image_color", 1, kinectCallBack);
-#else
-  ros::Subscriber sub = n.subscribe("/camera/rgb/image_mono", 1, kinectCallBack);
-#endif
+//  ros::Subscriber sub = n.subscribe("/camera/rgb/image_mono", 1, kinectCallBack);
   ros::Subscriber sub2 = n.subscribe(TOPIC_CONTROL, 1, controlCallBack);
 
   ros::Subscriber subDepth = n.subscribe("/camera/depth/image",1,depthCb);
@@ -192,23 +186,72 @@ int main(int argc,char * argv[])
 
 void convertmsg2img(const sensor_msgs::ImageConstPtr& msg)
 {
-  for(int i=0;i<640*480;i++)
-    {
-#ifdef RGB
-            img->imageData[i*3] = msg->data[i*3+2];
-            img->imageData[i*3+1] = msg->data[i*3+1];
-            img->imageData[i*3+2] = msg->data[i*3];
-#else
-		if( dist[i/640][i%640] < 2.0f || 1){
-            img->imageData[i] = msg->data[i];
-		}else
+	for(int i=0;i<640*480;i++)
 		{
-			img->imageData[i] = 0;
-		}
-#endif
-    }
-}
+			imgRGB->imageData[i*3] = msg->data[i*3+2];
+			imgRGB->imageData[i*3+1] = msg->data[i*3+1];
+			imgRGB->imageData[i*3+2] = msg->data[i*3];
 
+
+			/*if( dist[i/640][i%640] < 2.0f || 1){
+            	img->imageData[i] = msg->data[i];
+			}else
+			{
+				img->imageData[i] = 0;
+			}*/
+    }
+	cvCvtColor ( imgRGB , img , CV_RGB2GRAY );
+}
+unsigned maxRGB(unsigned char r,unsigned char g,unsigned b)
+{
+	if ( r >= g && r >= b )
+		return r;
+	if ( g >= r && g >=b )
+		return g;
+	return b;
+}
+unsigned minRGB(unsigned char r,unsigned char g,unsigned b)
+{
+	if ( r <= g && r <= b )
+		return r;
+	if ( g <= r && g <=b )
+		return g;
+	return b;
+}
+int isSkin(CvRect *r)
+{
+	return 1;
+	int SkinCount = 0;
+	unsigned char max = 0 , min = 252;
+	IplImage * tmp = cropImage(imgRGB,*r);
+	//faceImg = cropImage(img, *r);
+  	//faceImg = resizeImage(faceImg,100,100);
+	for(int i=0;i< r->width * r->height ; i++)
+	{
+		unsigned char b = tmp->imageData[i*3];
+		unsigned char g = tmp->imageData[i*3+1];
+		unsigned char r = tmp->imageData[i*3+2];
+		if( 	r > 95  // RED
+			&&	g > 40 // GREEN
+			&& 	b > 20 // BLUE
+			&& 	maxRGB(r,g,b) - minRGB(r,g,b) > 5
+			&&	abs(r-g) > 15
+			&& 	r > g && r > b
+			)
+		{
+			SkinCount++;
+			for( int t = 0; t< 3; t ++ ) tmp->imageData[i*3+t] = 0 ;
+		}
+	}
+	cvShowImage("tmp",tmp);
+	if ( SkinCount*1.0f / ( r->width*r->height) > 0.05f )
+	{
+		cvReleaseImage(&tmp); 
+		return 1;
+	}
+	else printf("no skin human !! %.2f\n" , SkinCount*1.0f / ( r->width*r->height));
+	return 0;
+}
 IplImage * detect_face(char filename[]){
 
   	CvMemStorage *storage = cvCreateMemStorage( 0 );
@@ -229,12 +272,15 @@ IplImage * detect_face(char filename[]){
   	for ( int i=0;i<( faces ? faces->total:0);i++)
   	{
           CvRect* tmp = (CvRect*)cvGetSeqElem(faces,i);
-          if( dist[tmp->y+tmp->height/2][tmp->x+tmp->width/2] < f_min 
-		  		isSkin(r);
-			)
+          if( dist[tmp->y+tmp->height/2][tmp->x+tmp->width/2] < f_min )
           {
 		  	haveFace = 1;
             r = tmp;
+			if( !isSkin(r) )  {
+				r=0;
+				haveFace = 0;
+				continue;
+			}
 			f_min = dist[tmp->y+tmp->height/2][tmp->x+tmp->width/2]; 
           }
   	}
