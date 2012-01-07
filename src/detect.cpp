@@ -46,7 +46,7 @@ double min_range_;
 double max_range_;
 float dist[480][640];
 int canPrintDepth = 0;
-
+int haveFace = 0;
 int g_nearest[20];
 int g_count = 0;
 int is_recog = 0;
@@ -73,6 +73,7 @@ void kinectCallBack(const sensor_msgs::ImageConstPtr& msg)
   //ROS_INFO("[%d] [%d]",msg->width,msg->height);
   	convertmsg2img(msg);
   	cvEqualizeHist(img,img);
+	haveFace = 0;
   	detect_face("haarcascade_frontalface_alt.xml");
   // show image
   	if(is_recog){
@@ -210,83 +211,85 @@ void convertmsg2img(const sensor_msgs::ImageConstPtr& msg)
 
 IplImage * detect_face(char filename[]){
 
-  CvMemStorage *storage = cvCreateMemStorage( 0 );
-  CvHaarClassifierCascade *cascade  = ( CvHaarClassifierCascade* )cvLoad( filename ,0 , 0, 0 );
-  CvRect *r = 0;
+  	CvMemStorage *storage = cvCreateMemStorage( 0 );
+  	CvHaarClassifierCascade *cascade  = ( CvHaarClassifierCascade* )cvLoad( filename ,0 , 0, 0 );
+  	CvRect *r = 0;
 
-  if(cascade == NULL)
-  {
-    printf("can't open haarcascade file . \n");
-    return 0;
-  }
+  	if(cascade == NULL)
+  	{
+  		printf("can't open haarcascade file . \n");
+		return 0;
+  	}
 
-  double t = (double)cvGetTickCount();
+  	double t = (double)cvGetTickCount();
 
-  CvSeq* faces = cvHaarDetectObjects( img , cascade , storage , 1.1 , 2 , CV_HAAR_DO_CANNY_PRUNING , cvSize(60,60));
+  	CvSeq* faces = cvHaarDetectObjects( img , cascade , storage , 1.1 , 2 , CV_HAAR_DO_CANNY_PRUNING , cvSize(90,90));
 
-  float f_min = 4.0f;
-  for ( int i=0;i<( faces ? faces->total:0);i++)
-  {;
+  	float f_min = 2.0f;
+  	for ( int i=0;i<( faces ? faces->total:0);i++)
+  	{
           CvRect* tmp = (CvRect*)cvGetSeqElem(faces,i);
-          if( dist[tmp->y+tmp->height/2][tmp->x+tmp->width/2] < f_min )
+          if( dist[tmp->y+tmp->height/2][tmp->x+tmp->width/2] < f_min 
+		  		isSkin(r);
+			)
           {
+		  	haveFace = 1;
             r = tmp;
 			f_min = dist[tmp->y+tmp->height/2][tmp->x+tmp->width/2]; 
           }
-  }
+  	}
 
   //printf("%.2f \n",bridge->image.ptr<float>( (r->y+r->height)*640 + r->x + r->width ));
-  if(r == NULL ) // check for can't find
-  {
-    printf("can't find any faces in Image\n");
-    return 0;
-  }
+  	if(r == NULL ) // check for can't find
+  	{
+		//printf("can't find any faces in Image\n");
+		return 0;
+	}
+	else
   //if(canPrintDepth)   printf("distance face : %.2f \n",dist[r->y+r->height/2][r->x+r->width/2]);
   //draw_image
-  cvRectangle(img,cvPoint(r->x,r->y),cvPoint(r->x+r->width,r->y+r->height),cvScalarAll(0.5),5,2,0);
+  	cvRectangle(img,cvPoint(r->x,r->y),cvPoint(r->x+r->width,r->y+r->height),cvScalarAll(0.5),5,2,0);
   //cvRectangle(depthImg,cvPoint(r->x,r->y),cvPoint(r->x+r->width,r->y+r->height),cvScalarAll(0.5),5,2,0);
   //cv::rectangle(depthImg,cvPoint(r->x,r->y),cvPoint(r->x+r->width,r->y+r->height),cvScalarAll(1.0),255,1,0);
-  faceImg = cropImage(img, *r);
-  faceImg = resizeImage(faceImg,100,100);
+	faceImg = cropImage(img, *r);
+  	faceImg = resizeImage(faceImg,100,100);
   // histogram equalized
-  cvEqualizeHist(faceImg,faceImg);
+  	cvEqualizeHist(faceImg,faceImg);
 
-  if(chkSave)
-  {
-    FILE * imgListFile;
-    // open the input file
-    if( !(imgListFile = fopen("./data/train.txt", "a+")) )
-    {
+  	if(chkSave)
+  	{
+  	  	FILE * imgListFile;
+    	// open the input file
+    	if( !(imgListFile = fopen("./data/train.txt", "a+")) )
+    	{
             //fprintf(stderr, "Can\'t open file %s\n", filename);
-            printf("ERROR : CAN'T OPEN train.txt\n");
+			printf("ERROR : CAN'T OPEN train.txt\n");
             //return 0;
-    }
-    fprintf(imgListFile,"%d data/%s_%d.pgm\n",nNames-1,name,faceCount);
-    fclose(imgListFile);
+    	}
+    	fprintf(imgListFile,"%d data/%s_%d.pgm\n",nNames-1,name,faceCount);
+    	fclose(imgListFile);
 
-    char cstr[100];
-    sprintf(cstr, "./data/%s_%d.pgm",name , faceCount++);
-    printf("Storing the current face of '%s' into image '%s'.\n", name , cstr);
-    cvSaveImage(cstr, faceImg, NULL);
-    if(faceCount == MAX_FACES)
-    {
-      chkSave = 0;
-      faceCount = 0;
-	learn();
-    }
-
-
-  }
+    	char cstr[100];
+    	sprintf(cstr, "./data/%s_%d.pgm",name , faceCount++);
+    	printf("Storing the current face of '%s' into image '%s'.\n", name , cstr);
+    	cvSaveImage(cstr, faceImg, NULL);
+    	if(faceCount == MAX_FACES)
+    	{
+    	  	chkSave = 0;
+    	  	faceCount = 0;
+			learn();
+	    }
+ 	 }
 
  // cvShowImage("face",faceImg);
-  t = (double)cvGetTickCount() - t ;
+  	t = (double)cvGetTickCount() - t ;
   // clear memory
-  if(storage) cvReleaseMemStorage(&storage);
-  if(cascade) cvReleaseHaarClassifierCascade(&cascade);
+  	if(storage) cvReleaseMemStorage(&storage);
+  	if(cascade) cvReleaseHaarClassifierCascade(&cascade);
 
   //printf("detect use time : %g\n",t/1000);
 
-  return faceImg;
+  	return faceImg;
 }
 
 
@@ -449,14 +452,9 @@ void recognize_realtime()
   int i, nTestFaces  = 0;         // the number of test images
   CvMat * trainPersonNumMat = 0;  // the person numbers during training
   float * projectedTestFace = 0;
-
+  while(!haveFace);
   // load the saved training data
   if( !loadTrainingData( &trainPersonNumMat ) ) return;
-  if(!faceImg)
-  {
-    printf("debug : can't find face for recog\n");
-    return ;
-  }
   // project the test images onto the PCA subspace
   projectedTestFace = (float *)cvAlloc( nEigens*sizeof(float) );
 
@@ -475,7 +473,7 @@ void recognize_realtime()
           truth    = personNumTruthMat->data.i[i];
           nearest  = trainPersonNumMat->data.i[iNearest];
 
-	printf("nearest = %d, Truth = %d\n", nearest, truth);
+	printf("nearest = %d \n", nearest);
 	g_nearest[nearest]++;
 	if(g_count == 10){
 		int index_max=0;
