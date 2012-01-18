@@ -18,7 +18,7 @@ using namespace std;
 using namespace cv;
 using namespace cv_bridge;
 
-#define MAX_FACES 20
+#define MAX_FACES 10
 #define TOPIC_CONTROL "/cmd_state"
 IplImage* imgRGB = cvCreateImage( cvSize(640,480),IPL_DEPTH_8U, 3 );
 IplImage* img = cvCreateImage( cvSize(640,480),IPL_DEPTH_8U, 1 );
@@ -36,7 +36,7 @@ CvMat * eigenValMat           = 0; // eigenvalues
 CvMat * projectedTrainFaceMat = 0; // projected training faces
 IplImage * faceImg;
 int faceCount = 0;
-int chkSave = 0;
+int chkSave = 0; // check for can save !?
 int nNames = 0;
 char name[100];
 double min_range_;
@@ -65,23 +65,32 @@ IplImage* resizeImage(const IplImage *origImg, int newWidth, int newHeight);
 void recognize_realtime();
 
 
+//====================================================
+//
+//	function callBack from subscribe image from openni
+//	subscribe from /camera/rgb/image_color
+//
+//=====================================================
 void kinectCallBack(const sensor_msgs::ImageConstPtr& msg)
 {
-  //ROS_INFO("[%d] [%d]",msg->width,msg->height);
   	convertmsg2img(msg);
   	cvEqualizeHist(img,img);
 	haveFace = 0;
   	detect_face("haarcascade_frontalface_alt.xml");
-  // show image
   	if(is_recog){
-		g_count++;
+		//g_count++;
 	    recognize_realtime();
 	}
   	cvShowImage("test",img);
-	cvShowImage("RGB",imgRGB);
+	//cvShowImage("RGB",imgRGB);
   	cv::waitKey(10);
 }
-
+//====================================================
+//
+//	function callBack from subscribe Depthimage from openni
+//	subscribe from /camera/depth/image
+//
+//=====================================================
 void depthCb( const sensor_msgs::ImageConstPtr& image )
 {
   canPrintDepth = 0;
@@ -98,7 +107,6 @@ void depthCb( const sensor_msgs::ImageConstPtr& image )
 
     // convert to something visible
     depthImg = Mat(bridge->image.rows, bridge->image.cols, CV_8UC1);
-  //  printf("[%d] [%d] \n",bridge->image.rows, bridge->image.cols);
     for(int i = 0; i < bridge->image.rows; i++)
     {
         float* Di = bridge->image.ptr<float>(i);
@@ -109,43 +117,35 @@ void depthCb( const sensor_msgs::ImageConstPtr& image )
             dist[i][j] = Di[j];
         }
     }
-    // display
     canPrintDepth = 1;
-   // cv::imshow("dept_test", depthImg);
-  //  cv::waitKey(3);
 }
-
+//====================================================
+//
+//	callBack for control state ( /cmd_state )
+//	test : for recognize image
+//  any name : detect 20 faces and learn
+//
+//=====================================================
 void controlCallBack(const std_msgs::String::ConstPtr& msg)
 {
   ROS_INFO("%s",msg->data.c_str());
-
-	// debug recognizer 
-	//return ;
 
   if(!strcmp(msg->data.c_str(),"test"))
   {
  	is_recog = 1; 
     return ;
   }
-  if(!strcmp(msg->data.c_str(),"target"))
-    {
-      learn();
-      return ;
-    }
-  /*if(strcmp(msg->data.c_str(),"one")!=0 && strcmp(msg->data.c_str(),"peter")!=0)
-     return ;*/
+
   chkSave = 1;
   FILE * imgListFile;
-  // open the input file
+
   if( !(imgListFile = fopen("./data/names.txt", "a+")) )
   {
-          //fprintf(stderr, "Can\'t open file %s\n", filename);
           printf("ERROR : CAN'T OPEN train.txt\n");
-          //return 0;
+
   }
 
   strcpy(name,msg->data.c_str());
-  //strcpy(name,"pond");
   fprintf(imgListFile,"%d %s\n",nNames++,name);
 
   fclose(imgListFile);
@@ -156,16 +156,11 @@ int main(int argc,char * argv[])
   ros::init(argc,argv,"faces");
   ros::NodeHandle n;
   ros::NodeHandle nh("~");
-
   nh.param("min_range", min_range_, 0.5);
   nh.param("max_range", max_range_, 5.5);
-
   ros::Subscriber sub = n.subscribe("/camera/rgb/image_color", 1, kinectCallBack);
-//  ros::Subscriber sub = n.subscribe("/camera/rgb/image_mono", 1, kinectCallBack);
   ros::Subscriber sub2 = n.subscribe(TOPIC_CONTROL, 1, controlCallBack);
-
   ros::Subscriber subDepth = n.subscribe("/camera/depth/image",1,depthCb);
-
 
   if( !(imgListFile = fopen("data/names.txt", "a+")) )
   {
@@ -179,7 +174,6 @@ int main(int argc,char * argv[])
 
   printf("pass\n");
   //learn();
-  system("espeak --stdout \'Ready\' | aplay");
   is_init = 1;
   ros::spin();
 }
@@ -191,17 +185,13 @@ void convertmsg2img(const sensor_msgs::ImageConstPtr& msg)
 			imgRGB->imageData[i*3] = msg->data[i*3+2];
 			imgRGB->imageData[i*3+1] = msg->data[i*3+1];
 			imgRGB->imageData[i*3+2] = msg->data[i*3];
-
-
-			/*if( dist[i/640][i%640] < 2.0f || 1){
-            	img->imageData[i] = msg->data[i];
-			}else
-			{
-				img->imageData[i] = 0;
-			}*/
     }
 	cvCvtColor ( imgRGB , img , CV_RGB2GRAY );
 }
+//=================================================================================
+//			function for detect skin ( now can't use )
+//
+// function for use in skin detection
 unsigned maxRGB(unsigned char r,unsigned char g,unsigned b)
 {
 	if ( r >= g && r >= b )
@@ -210,6 +200,7 @@ unsigned maxRGB(unsigned char r,unsigned char g,unsigned b)
 		return g;
 	return b;
 }
+// function for use in skin detection
 unsigned minRGB(unsigned char r,unsigned char g,unsigned b)
 {
 	if ( r <= g && r <= b )
@@ -222,7 +213,8 @@ int isSkin(CvRect *r)
 {
 	return 1;
 	int SkinCount = 0;
-	unsigned char max = 0 , min = 252;
+	unsigned char max = 0 ;
+	unsigned char min = 252;
 	IplImage * tmp = cropImage(imgRGB,*r);
 	//faceImg = cropImage(img, *r);
   	//faceImg = resizeImage(faceImg,100,100);
@@ -243,7 +235,7 @@ int isSkin(CvRect *r)
 			for( int t = 0; t< 3; t ++ ) tmp->imageData[i*3+t] = 0 ;
 		}
 	}
-	cvShowImage("tmp",tmp);
+	//cvShowImage("tmp",tmp);
 	if ( SkinCount*1.0f / ( r->width*r->height) > 0.05f )
 	{
 		cvReleaseImage(&tmp); 
@@ -252,6 +244,7 @@ int isSkin(CvRect *r)
 	else printf("no skin human !! %.2f\n" , SkinCount*1.0f / ( r->width*r->height));
 	return 0;
 }
+//===================================================================================================================
 IplImage * detect_face(char filename[]){
 
   	CvMemStorage *storage = cvCreateMemStorage( 0 );
@@ -264,9 +257,14 @@ IplImage * detect_face(char filename[]){
 		return 0;
   	}
 
-  	double t = (double)cvGetTickCount();
-
-  	CvSeq* faces = cvHaarDetectObjects( img , cascade , storage , 1.1 , 2 , CV_HAAR_DO_CANNY_PRUNING , cvSize(90,90));
+  	CvSeq* faces = cvHaarDetectObjects( img
+										, cascade
+										, storage
+										, 1.1
+										, 2
+										, CV_HAAR_DO_CANNY_PRUNING
+										, cvSize(70,70)  // ขนาด matrix ที่ใช้เริ่มในการหาใบหน้า
+										);
 
   	float f_min = 2.0f;
   	for ( int i=0;i<( faces ? faces->total:0);i++)
@@ -285,21 +283,16 @@ IplImage * detect_face(char filename[]){
           }
   	}
 
-  //printf("%.2f \n",bridge->image.ptr<float>( (r->y+r->height)*640 + r->x + r->width ));
   	if(r == NULL ) // check for can't find
   	{
-		//printf("can't find any faces in Image\n");
 		return 0;
 	}
+
 	else
-  //if(canPrintDepth)   printf("distance face : %.2f \n",dist[r->y+r->height/2][r->x+r->width/2]);
-  //draw_image
   	cvRectangle(img,cvPoint(r->x,r->y),cvPoint(r->x+r->width,r->y+r->height),cvScalarAll(0.5),5,2,0);
-  //cvRectangle(depthImg,cvPoint(r->x,r->y),cvPoint(r->x+r->width,r->y+r->height),cvScalarAll(0.5),5,2,0);
-  //cv::rectangle(depthImg,cvPoint(r->x,r->y),cvPoint(r->x+r->width,r->y+r->height),cvScalarAll(1.0),255,1,0);
+
 	faceImg = cropImage(img, *r);
   	faceImg = resizeImage(faceImg,100,100);
-  // histogram equalized
   	cvEqualizeHist(faceImg,faceImg);
 
   	if(chkSave)
@@ -308,9 +301,7 @@ IplImage * detect_face(char filename[]){
     	// open the input file
     	if( !(imgListFile = fopen("./data/train.txt", "a+")) )
     	{
-            //fprintf(stderr, "Can\'t open file %s\n", filename);
 			printf("ERROR : CAN'T OPEN train.txt\n");
-            //return 0;
     	}
     	fprintf(imgListFile,"%d data/%s_%d.pgm\n",nNames-1,name,faceCount);
     	fclose(imgListFile);
@@ -327,14 +318,8 @@ IplImage * detect_face(char filename[]){
 	    }
  	 }
 
- // cvShowImage("face",faceImg);
-  	t = (double)cvGetTickCount() - t ;
-  // clear memory
   	if(storage) cvReleaseMemStorage(&storage);
   	if(cascade) cvReleaseHaarClassifierCascade(&cascade);
-
-  //printf("detect use time : %g\n",t/1000);
-
   	return faceImg;
 }
 
@@ -398,9 +383,6 @@ IplImage* resizeImage(const IplImage *origImg, int newWidth, int newHeight)
 
         return outImg;
 }
-//////////////////////////////////
-// learn()
-//
 void learn()
 {
         int i, offset;
@@ -441,64 +423,17 @@ void learn()
     	system("espeak --stdout \'now i remember you\' | aplay");
 }
 
-
-//////////////////////////////////
-// recognize()
-//
-void recognize()
-{
-        int i, nTestFaces  = 0;         // the number of test images
-        CvMat * trainPersonNumMat = 0;  // the person numbers during training
-        float * projectedTestFace = 0;
-
-        // load test images and ground truth for person number
-        nTestFaces = loadFaceImgArray("test.txt");
-        printf("%d test faces loaded\n", nTestFaces);
-
-        // load the saved training data
-        if( !loadTrainingData( &trainPersonNumMat ) ) return;
-
-        // project the test images onto the PCA subspace
-        projectedTestFace = (float *)cvAlloc( nEigens*sizeof(float) );
-        for(i=0; i<nTestFaces; i++)
-        {
-                int iNearest, nearest, truth;
-
-                // project the test image onto the PCA subspace
-                cvEigenDecomposite(
-                        faceImgArr[i],
-                        nEigens,
-                        eigenVectArr,
-                        0, 0,
-                        pAvgTrainImg,
-                        projectedTestFace);
-
-                iNearest = findNearestNeighbor(projectedTestFace);
-                truth    = personNumTruthMat->data.i[i];
-                nearest  = trainPersonNumMat->data.i[iNearest];
-
-                printf("nearest = %d, Truth = %d\n", nearest, truth);
-		//   "espeak --stdout \'" + sp + "' | aplay"
-			char name[100];
-			int num_tmp;
-			FILE *fp = fopen("data/names.txt", "r");
-			for(int fi=0;fi<nearest;fi++)			
-				fscanf(fp, "%d %s", &num_tmp , name);	// read number of objects
-			fclose(fp);
-			printf("your name is name : %s\n",name);
-			char cmd[1024];
-			sprintf(cmd,  "espeak --stdout \' %s \' | aplay", name);
-			system(cmd);
-
-        }
-}
-
 void recognize_realtime()
 {
   int i, nTestFaces  = 0;         // the number of test images
   CvMat * trainPersonNumMat = 0;  // the person numbers during training
   float * projectedTestFace = 0;
-  while(!haveFace);
+  if(!haveFace)
+  {
+		 //printf("count : %d\n",g_count--);
+		 return ;
+  }
+  g_count++;
   // load the saved training data
   if( !loadTrainingData( &trainPersonNumMat ) ) return;
   // project the test images onto the PCA subspace
@@ -549,9 +484,6 @@ void recognize_realtime()
 }
 
 
-//////////////////////////////////
-// loadTrainingData()
-//
 int loadTrainingData(CvMat ** pTrainPersonNumMat)
 {
         CvFileStorage * fileStorage;
@@ -584,9 +516,7 @@ int loadTrainingData(CvMat ** pTrainPersonNumMat)
 
         return 1;
 }
-//////////////////////////////////
-// storeTrainingData()
-//
+
 void storeTrainingData()
 {
         CvFileStorage * fileStorage;
@@ -614,9 +544,6 @@ void storeTrainingData()
 }
 
 
-//////////////////////////////////
-// findNearestNeighbor()
-//
 int findNearestNeighbor(float * projectedTestFace)
 {
         //double leastDistSq = 1e12;
@@ -642,14 +569,10 @@ int findNearestNeighbor(float * projectedTestFace)
                         iNearest = iTrain;
                 }
         }
-
+    //    printf("leastDistSq = %.f \n",leastDistSq);
         return iNearest;
 }
 
-
-//////////////////////////////////
-// doPCA()
-//
 void doPCA()
 {
         int i;
@@ -690,10 +613,6 @@ void doPCA()
         cvNormalize(eigenValMat, eigenValMat, 1, 0, CV_L1, 0);
 }
 
-
-//////////////////////////////////
-// loadFaceImgArray()
-//
 int loadFaceImgArray(char * filename)
 {
         FILE * imgListFile = 0;
@@ -702,7 +621,6 @@ int loadFaceImgArray(char * filename)
 
 
         // open the input file
-      //  printf("%s\n",filename);
         if( !(imgListFile = fopen(filename, "r")) )
         {
                 fprintf(stderr, "Can\'t open file %s\n", filename);
@@ -712,20 +630,15 @@ int loadFaceImgArray(char * filename)
         // count the number of faces
         while( fgets(imgFilename, 512, imgListFile) ) ++nFaces;
         rewind(imgListFile);
-        //printf("%d\n",nFaces);
         // allocate the face-image array and person number matrix
         faceImgArr        = (IplImage **)cvAlloc( nFaces*sizeof(IplImage *) );
         personNumTruthMat = cvCreateMat( 1, nFaces, CV_32SC1 );
         // store the face images in an array
         for(iFace=0; iFace<nFaces; iFace++)
         {
-              //  printf("%d ",iFace);
                 // read person number and name of image file
                 fscanf(imgListFile,
                        "%d %s", personNumTruthMat->data.i+iFace, imgFilename);
-                //sprintf(imgFilename,"%s_%d.pgm","pond",iFace);
-                // load the face image
-             //   printf("%s\n",imgFilename);
                 faceImgArr[iFace] = cvLoadImage(imgFilename, CV_LOAD_IMAGE_GRAYSCALE);
 
                 if( !faceImgArr[iFace] )
