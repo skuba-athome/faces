@@ -24,7 +24,7 @@ IplImage* imgRGB = cvCreateImage( cvSize(640,480),IPL_DEPTH_8U, 3 );
 IplImage* img = cvCreateImage( cvSize(640,480),IPL_DEPTH_8U, 1 );
 cv::Mat depthImg ;
 cv_bridge::CvImagePtr bridge;
-
+ros::Publisher detect_state;
 //// Global variables
 IplImage ** faceImgArr        = 0; // array of face images
 CvMat    *  personNumTruthMat = 0; // array of person numbers
@@ -161,7 +161,7 @@ int main(int argc,char * argv[])
   ros::Subscriber sub = n.subscribe("/camera/rgb/image_color", 1, kinectCallBack);
   ros::Subscriber sub2 = n.subscribe(TOPIC_CONTROL, 1, controlCallBack);
   ros::Subscriber subDepth = n.subscribe("/camera/depth/image",1,depthCb);
-
+	detect_state = n.adverstise<std_msgs::String>("detect_state",10);
   if( !(imgListFile = fopen("data/names.txt", "a+")) )
   {
           fprintf(stderr, "Can\'t open file %s\n", "names.txt");
@@ -420,7 +420,10 @@ void learn()
         // store the recognition data as an xml file
     storeTrainingData();
 	if(is_init)
+	{
+		detect_state.publish("next");
     	system("espeak --stdout \'now i remember you\' | aplay");
+	}
 }
 
 void recognize_realtime()
