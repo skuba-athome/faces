@@ -146,7 +146,7 @@ void controlCallBack(const std_msgs::String::ConstPtr& msg)
   }
 
   strcpy(name,msg->data.c_str());
-  fprintf(imgListFile,"%d %s\n",nNames++,name);
+  fprintf(imgListFile,"%d %s\n",nNames,name);
 
   fclose(imgListFile);
 }
@@ -423,6 +423,7 @@ void learn()
 	{
 		//detect_state.publish("next");
     	system("espeak --stdout \'now i remember you\' | aplay");
+		nNames++;
 	}
 }
 
