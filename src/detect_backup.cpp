@@ -1,5 +1,78 @@
-#include"detect.h"
+#include <ros/ros.h>
+#include <cv_bridge/cv_bridge.h>
+#include <sensor_msgs/image_encodings.h>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <sensor_msgs/Image.h>
+#include <cv.h>
+#include <highgui.h>
+#include <opencv2/objdetect/objdetect.hpp>
+#include <std_msgs/String.h>
+#include <string.h>
+#include <cxcore.h>
+#include <cvaux.h>
+#include <stdlib.h>
 
+//#define RGB
+using namespace std;
+using namespace cv;
+using namespace cv_bridge;
+
+#define MAX_FACES 10
+#define TOPIC_CONTROL "/cmd_state"
+IplImage* imgRGB = cvCreateImage( cvSize(640,480),IPL_DEPTH_8U, 3 );
+IplImage* img = cvCreateImage( cvSize(640,480),IPL_DEPTH_8U, 1 );
+cv::Mat depthImg ;
+cv_bridge::CvImagePtr bridge;
+//ros::Publisher detect_state;
+//// Global variables
+IplImage ** faceImgArr        = 0; // array of face images
+CvMat    *  personNumTruthMat = 0; // array of person numbers
+int nTrainFaces               = 0; // the number of training images
+int nEigens                   = 0; // the number of eigenvalues
+IplImage * pAvgTrainImg       = 0; // the average image
+IplImage ** eigenVectArr      = 0; // eigenvectors
+CvMat * eigenValMat           = 0; // eigenvalues
+CvMat * projectedTrainFaceMat = 0; // projected training faces
+IplImage * faceImg;
+int faceCount = 0;
+int chkSave = 0; // check for can save !?
+int nNames = 0;
+char name[100];
+double min_range_;
+double max_range_;
+float dist[480][640];
+int canPrintDepth = 0; // บางทีค่า depth มันมาช้ากว่า RGB พอเฟรมแรกแมร่งก็พัง ><
+int haveFace = 0;
+int g_nearest[20];
+int g_count = 0;
+int is_recog = 0;
+int is_init = 0;
+
+void convertmsg2img(const sensor_msgs::ImageConstPtr& msg);
+IplImage * detect_face(char filename[]);
+//// Function prototypes
+void learn();
+void recognize();
+void doPCA();
+void storeTrainingData();
+int  loadTrainingData(CvMat ** pTrainPersonNumMat);
+int  findNearestNeighbor(float * projectedTestFace);
+int  loadFaceImgArray(char * filename);
+void printUsage();
+IplImage* cropImage(const IplImage *img, const CvRect region);
+IplImage* resizeImage(const IplImage *origImg, int newWidth, int newHeight);
+IplImage* convertFloatImageToUcharImage(const IplImage *srcImg);
+void saveFloatImage(const char *filename, const IplImage *srcImg);
+void recognize_realtime();
+
+
+//====================================================
+//
+//	function callBack from subscribe image from openni
+//	subscribe from /camera/rgb/image_color
+//
+//=====================================================
 void kinectCallBack(const sensor_msgs::ImageConstPtr& msg)
 {
   	convertmsg2img(msg);
@@ -11,12 +84,19 @@ void kinectCallBack(const sensor_msgs::ImageConstPtr& msg)
 	    recognize_realtime();
 	}
   	cvShowImage("test",img);
+	//cvShowImage("RGB",imgRGB);
   	cv::waitKey(10);
 }
-
+//====================================================
+//
+//	function callBack from subscribe Depthimage from openni
+//	subscribe from /camera/depth/image
+//
+//=====================================================
 void depthCb( const sensor_msgs::ImageConstPtr& image )
 {
-	canPrintDepth = 0;
+  canPrintDepth = 0;
+    // convert to cv image
     try
     {
         bridge = cv_bridge::toCvCopy(image, "32FC1");
@@ -26,6 +106,8 @@ void depthCb( const sensor_msgs::ImageConstPtr& image )
         ROS_ERROR("Failed to transform depth image.");
         return;
     }
+
+    // convert to something visible
     depthImg = Mat(bridge->image.rows, bridge->image.cols, CV_8UC1);
     for(int i = 0; i < bridge->image.rows; i++)
     {
@@ -39,7 +121,13 @@ void depthCb( const sensor_msgs::ImageConstPtr& image )
     }
     canPrintDepth = 1;
 }
-
+//====================================================
+//
+//	callBack for control state ( /cmd_state )
+//	test : for recognize image
+//  any name : detect x faces and learn
+//
+//=====================================================
 void controlCallBack(const std_msgs::String::ConstPtr& msg)
 {
   ROS_INFO("%s",msg->data.c_str());
@@ -58,8 +146,10 @@ void controlCallBack(const std_msgs::String::ConstPtr& msg)
           printf("don't have train.txt , i will creater new file\n");
           system("touch ./data/names.txt");
   }
+
   strcpy(name,msg->data.c_str());
   fprintf(imgListFile,"%d %s\n",nNames,name);
+
   fclose(imgListFile);
 
 
@@ -88,10 +178,12 @@ int main(int argc,char * argv[])
   while( fgets(tmp, 512, imgListFile) ) ++nNames;
 
   printf("pass\n");
-  learn();
+  //learn();
   is_init = 1;
   ros::spin();
 }
+
+
 
 void convertmsg2img(const sensor_msgs::ImageConstPtr& msg)
 {
@@ -103,7 +195,64 @@ void convertmsg2img(const sensor_msgs::ImageConstPtr& msg)
     }
 	cvCvtColor ( imgRGB , img , CV_RGB2GRAY );
 }
+//=================================================================================
+//	function for detect skin ( now can't use )
+//
+// function for use in skin detection
+unsigned maxRGB(unsigned char r,unsigned char g,unsigned b)
+{
+	if ( r >= g && r >= b )
+		return r;
+	if ( g >= r && g >=b )
+		return g;
+	return b;
+}
+// function for use in skin detection
+unsigned minRGB(unsigned char r,unsigned char g,unsigned b)
+{
+	if ( r <= g && r <= b )
+		return r;
+	if ( g <= r && g <=b )
+		return g;
+	return b;
+}
 
+
+int isSkin(CvRect *r)
+{
+	return 1;
+	int SkinCount = 0;
+	unsigned char max = 0 ;
+	unsigned char min = 252;
+	IplImage * tmp = cropImage(imgRGB,*r);
+	//faceImg = cropImage(img, *r);
+  	//faceImg = resizeImage(faceImg,100,100);
+	for(int i=0;i< r->width * r->height ; i++)
+	{
+		unsigned char b = tmp->imageData[i*3];
+		unsigned char g = tmp->imageData[i*3+1];
+		unsigned char r = tmp->imageData[i*3+2];
+		if( 	r > 95  // RED
+			&&	g > 40 // GREEN
+			&& 	b > 20 // BLUE
+			&& 	maxRGB(r,g,b) - minRGB(r,g,b) > 5
+			&&	abs(r-g) > 15
+			&& 	r > g && r > b
+			)
+		{
+			SkinCount++;
+			for( int t = 0; t< 3; t ++ ) tmp->imageData[i*3+t] = 0 ;
+		}
+	}
+	//cvShowImage("tmp",tmp);
+	if ( SkinCount*1.0f / ( r->width*r->height) > 0.05f )
+	{
+		cvReleaseImage(&tmp);
+		return 1;
+	}
+	else printf("no skin human !! %.2f\n" , SkinCount*1.0f / ( r->width*r->height));
+	return 0;
+}
 //===================================================================================================================
 IplImage * detect_face(char filename[]){
 
@@ -212,7 +361,6 @@ IplImage* cropImage(const IplImage *img, const CvRect region)
     cvReleaseImage( &imageTmp );
         return imageRGB;
 }
-
 IplImage* resizeImage(const IplImage *origImg, int newWidth, int newHeight)
 {
         IplImage *outImg = 0;
@@ -277,14 +425,14 @@ void learn()
 
         }
         //cvShowImage("eigen_face",eigenVectArr[0]);
-/*		for(int i = 0; i<nTrainFaces;i++)
+		for(int i = 0; i<nTrainFaces;i++)
 		{
 			char filename[25];
 			sprintf(filename,"data/eigen_pond%d.pgm",i);
 			saveFloatImage(filename,eigenVectArr[i]);
 		}
 		saveFloatImage("data/AvgImg.pgm",pAvgTrainImg);
-        // store the recognition data as an xml file */
+        // store the recognition data as an xml file
     storeTrainingData();
 	if(is_init)
 	{
@@ -292,7 +440,6 @@ void learn()
     	system("espeak --stdout \'now i remember you\' | aplay");
 		nNames++;
 	}
-	printf("debug segment.. \n");
 }
 void recognize_realtime()
 {
@@ -328,10 +475,10 @@ void recognize_realtime()
 
 	printf("nearest = %d \n", nearest);
 	g_nearest[nearest]++;
-	if(g_count == nTestfaces){
+	if(g_count == 10){
 		int index_max=0;
 		int max = -1;
-		for(int i = 0 ; i< nTestfaces ; i++)
+		for(int i = 0 ; i< 5 ; i++)
 		{
 			if(g_nearest[i] > max)
 			{
@@ -351,7 +498,7 @@ void recognize_realtime()
 		system(cmd);
 		is_recog = 0;
 		g_count = 0;
-		for(int i =0;i<nTestfaces;i++)	g_nearest[i]=0;
+		for(int i =0;i<10;i++)	g_nearest[i]=0;
 	}
 }
 int loadTrainingData(CvMat ** pTrainPersonNumMat)
@@ -407,7 +554,7 @@ void storeTrainingData()
                 sprintf( varname, "eigenVect_%d", i );
                 cvWrite(fileStorage, varname, eigenVectArr[i], cvAttrList(0,0));
         }
-		printf("debug saveStorage\n");
+
         // release the file-storage interface
         cvReleaseFileStorage( &fileStorage );
 }
@@ -436,6 +583,7 @@ int findNearestNeighbor(float * projectedTestFace)
                         iNearest = iTrain;
                 }
         }
+    //    printf("leastDistSq = %.f \n",leastDistSq);
         return iNearest;
 }
 void doPCA()
@@ -522,15 +670,19 @@ int loadFaceImgArray(char * filename)
         return nFaces;
 }
 
+// Store a greyscale floating-point CvMat image into a BMP/JPG/GIF/PNG image,
+// since cvSaveImage() can only handle 8bit images (not 32bit float images).
 void saveFloatImage(const char *filename, const IplImage *srcImg)
 {
 	//cout << "Saving Float Image '" << filename << "' (" << srcImg->width << "," << srcImg->height << "). " << endl;
 	IplImage *byteImg = convertFloatImageToUcharImage(srcImg);
 	cvSaveImage(filename, byteImg);
-	//cvReleaseImage(&byteImg);
-	printf("debug_saveFloatImage\n");
+	cvReleaseImage(&byteImg);
 }
 
+
+// Get an 8-bit equivalent of the 32-bit Float image.
+// Returns a new image, so remember to call 'cvReleaseImage()' on the result.
 IplImage* convertFloatImageToUcharImage(const IplImage *srcImg)
 {
 	IplImage *dstImg = 0;
@@ -554,61 +706,5 @@ IplImage* convertFloatImageToUcharImage(const IplImage *srcImg)
 		dstImg = cvCreateImage(cvSize(srcImg->width, srcImg->height), 8, 1);
 		cvConvertScale(srcImg, dstImg, 255.0 / (maxVal - minVal), - minVal * 255.0 / (maxVal-minVal));
 	}
-	printf("debug convertFloatImage\n");
 	return dstImg;
-}
-
-
-unsigned maxRGB(unsigned char r,unsigned char g,unsigned b)
-{
-	if ( r >= g && r >= b )
-		return r;
-	if ( g >= r && g >=b )
-		return g;
-	return b;
-}
-// function for use in skin detection
-unsigned minRGB(unsigned char r,unsigned char g,unsigned b)
-{
-	if ( r <= g && r <= b )
-		return r;
-	if ( g <= r && g <=b )
-		return g;
-	return b;
-}
-
-int isSkin(CvRect *r)
-{
-	return 1;
-	int SkinCount = 0;
-	unsigned char max = 0 ;
-	unsigned char min = 252;
-	IplImage * tmp = cropImage(imgRGB,*r);
-	//faceImg = cropImage(img, *r);
-  	//faceImg = resizeImage(faceImg,100,100);
-	for(int i=0;i< r->width * r->height ; i++)
-	{
-		unsigned char b = tmp->imageData[i*3];
-		unsigned char g = tmp->imageData[i*3+1];
-		unsigned char r = tmp->imageData[i*3+2];
-		if( 	r > 95  // RED
-			&&	g > 40 // GREEN
-			&& 	b > 20 // BLUE
-			&& 	maxRGB(r,g,b) - minRGB(r,g,b) > 5
-			&&	abs(r-g) > 15
-			&& 	r > g && r > b
-			)
-		{
-			SkinCount++;
-			for( int t = 0; t< 3; t ++ ) tmp->imageData[i*3+t] = 0 ;
-		}
-	}
-	//cvShowImage("tmp",tmp);
-	if ( SkinCount*1.0f / ( r->width*r->height) > 0.05f )
-	{
-		cvReleaseImage(&tmp);
-		return 1;
-	}
-	else printf("no skin human !! %.2f\n" , SkinCount*1.0f / ( r->width*r->height));
-	return 0;
 }
