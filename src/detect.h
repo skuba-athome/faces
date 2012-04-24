@@ -22,8 +22,8 @@ using namespace cv_bridge;
 #define TOPIC_CONTROL "/cmd_state"
 #define nTestfaces 10
 
-IplImage* imgRGB = cvCreateImage( cvSize(640,480),IPL_DEPTH_8U, 3 );
-IplImage* img = cvCreateImage( cvSize(640,480),IPL_DEPTH_8U, 1 );
+IplImage* imgRGB = cvCreateImage( cvSize(1280,1024),IPL_DEPTH_8U, 3 );
+IplImage* img = cvCreateImage( cvSize(1280,1024),IPL_DEPTH_8U, 1 );
 cv::Mat depthImg ;
 cv_bridge::CvImagePtr bridge;
 IplImage ** faceImgArr        = 0; // array of face images
@@ -41,7 +41,7 @@ int nNames = 0;
 char name[100];
 double min_range_;
 double max_range_;
-float dist[480][640];
+float dist[1280][1024];
 int canPrintDepth = 0; // บางทีค่า depth มันมาช้ากว่า RGB พอเฟรมแรกแมร่งก็พัง ><
 int haveFace = 0;
 int g_nearest[20];

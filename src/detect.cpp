@@ -5,8 +5,8 @@ void kinectCallBack(const sensor_msgs::ImageConstPtr& msg)
   	convertmsg2img(msg);
   	cvEqualizeHist(img,img);
 	haveFace = 0;
-  	detect_face("cup.xml");
-  	//detect_face("haarcascade_frontalface_alt.xml");
+  	//detect_face("cup.xml");
+  	detect_face("haarcascade_frontalface_alt.xml");
   	if(is_recog){
 		//g_count++;
 	    recognize_realtime();
@@ -96,7 +96,7 @@ int main(int argc,char * argv[])
 
 void convertmsg2img(const sensor_msgs::ImageConstPtr& msg)
 {
-	for(int i=0;i<640*480;i++)
+	for(int i=0;i<1280*1024;i++)
 		{
 			imgRGB->imageData[i*3] = msg->data[i*3+2];
 			imgRGB->imageData[i*3+1] = msg->data[i*3+1];
