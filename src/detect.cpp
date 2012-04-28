@@ -62,9 +62,9 @@ void controlCallBack(const std_msgs::String::ConstPtr& msg)
   strcpy(name,msg->data.c_str());
   fprintf(imgListFile,"%d %s\n",nNames,name);
   fclose(imgListFile);
-
-
 }
+
+
 int main(int argc,char * argv[])
 {
   FILE * imgListFile = 0;
@@ -83,20 +83,20 @@ int main(int argc,char * argv[])
           system("touch ./data/name.txt");
           //return 0;
   }
-
+/*
   // count the number of faces
   char tmp[20];
   while( fgets(tmp, 512, imgListFile) ) ++nNames;
 
   printf("pass\n");
-  learn();
+  learn();*/
   is_init = 1;
   ros::spin();
 }
 
 void convertmsg2img(const sensor_msgs::ImageConstPtr& msg)
 {
-	for(int i=0;i<1280*1024;i++)
+	for(int i=0;i<640*480;i++)
 		{
 			imgRGB->imageData[i*3] = msg->data[i*3+2];
 			imgRGB->imageData[i*3+1] = msg->data[i*3+1];
@@ -106,8 +106,8 @@ void convertmsg2img(const sensor_msgs::ImageConstPtr& msg)
 }
 
 //===================================================================================================================
-IplImage * detect_face(char filename[]){
-
+IplImage * detect_face(char filename[])
+{
   	CvMemStorage *storage = cvCreateMemStorage( 0 );
   	CvHaarClassifierCascade *cascade  = ( CvHaarClassifierCascade* )cvLoad( filename ,0 , 0, 0 );
   	CvRect *r = 0;
@@ -295,6 +295,7 @@ void learn()
 	}
 	printf("debug segment.. \n");
 }
+
 void recognize_realtime()
 {
   int i, nTestFaces  = 0;         // the number of test images

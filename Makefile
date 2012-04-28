@@ -187,6 +187,19 @@ detect/fast:
 .PHONY : detect/fast
 
 #=============================================================================
+# Target rules for targets named people
+
+# Build rule for target.
+people: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 people
+.PHONY : people
+
+# fast build rule for target.
+people/fast:
+	$(MAKE) -f CMakeFiles/people.dir/build.make CMakeFiles/people.dir/build
+.PHONY : people/fast
+
+#=============================================================================
 # Target rules for targets named rosbuild_precompile
 
 # Build rule for target.
@@ -346,6 +359,21 @@ src/detect.s:
 	$(MAKE) -f CMakeFiles/detect.dir/build.make CMakeFiles/detect.dir/src/detect.s
 .PHONY : src/detect.s
 
+# target to build an object file
+src/people.o:
+	$(MAKE) -f CMakeFiles/people.dir/build.make CMakeFiles/people.dir/src/people.o
+.PHONY : src/people.o
+
+# target to preprocess a source file
+src/people.i:
+	$(MAKE) -f CMakeFiles/people.dir/build.make CMakeFiles/people.dir/src/people.i
+.PHONY : src/people.i
+
+# target to generate assembly for a file
+src/people.s:
+	$(MAKE) -f CMakeFiles/people.dir/build.make CMakeFiles/people.dir/src/people.s
+.PHONY : src/people.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -360,6 +388,7 @@ help:
 	@echo "... control"
 	@echo "... detect"
 	@echo "... edit_cache"
+	@echo "... people"
 	@echo "... rebuild_cache"
 	@echo "... rosbuild_precompile"
 	@echo "... rosbuild_premsgsrvgen"
@@ -377,6 +406,9 @@ help:
 	@echo "... src/detect.o"
 	@echo "... src/detect.i"
 	@echo "... src/detect.s"
+	@echo "... src/people.o"
+	@echo "... src/people.i"
+	@echo "... src/people.s"
 .PHONY : help
 
 
