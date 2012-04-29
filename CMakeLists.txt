@@ -34,13 +34,19 @@ target_link_libraries(detect /opt/ros/fuerte/lib/libopencv_highgui.so)
 target_link_libraries(detect /opt/ros/fuerte/lib/libopencv_objdetect.so)
 target_link_libraries(detect /opt/ros/fuerte/lib/libopencv_legacy.so)
 
-
+rosbuild_add_library(surf_libs	src/integral.cpp
+								src/utils.cpp
+								src/fasthessian.cpp
+								src/ipoint.cpp
+								src/surf.cpp)
+rosbuild_add_compile_flags(surf_libs "-fPIC")
+target_link_libraries(surf_libs /opt/ros/fuerte/lib/libopencv_calib3d.so)
 rosbuild_add_executable(people src/people.cpp)
 target_link_libraries(people /opt/ros/fuerte/lib/libopencv_core.so)
 target_link_libraries(people /opt/ros/fuerte/lib/libopencv_imgproc.so)
 target_link_libraries(people /opt/ros/fuerte/lib/libopencv_highgui.so)
 target_link_libraries(people /opt/ros/fuerte/lib/libopencv_objdetect.so)
 target_link_libraries(people /opt/ros/fuerte/lib/libopencv_legacy.so)
+target_link_libraries(people surf_libs)
 
-#
-#target_link_libraries(example ${PROJECT_NAME})
+

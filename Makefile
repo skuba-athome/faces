@@ -265,6 +265,19 @@ rospack_gensrv/fast:
 .PHONY : rospack_gensrv/fast
 
 #=============================================================================
+# Target rules for targets named surf_libs
+
+# Build rule for target.
+surf_libs: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 surf_libs
+.PHONY : surf_libs
+
+# fast build rule for target.
+surf_libs/fast:
+	$(MAKE) -f CMakeFiles/surf_libs.dir/build.make CMakeFiles/surf_libs.dir/build
+.PHONY : surf_libs/fast
+
+#=============================================================================
 # Target rules for targets named test
 
 # Build rule for target.
@@ -360,6 +373,51 @@ src/detect.s:
 .PHONY : src/detect.s
 
 # target to build an object file
+src/fasthessian.o:
+	$(MAKE) -f CMakeFiles/surf_libs.dir/build.make CMakeFiles/surf_libs.dir/src/fasthessian.o
+.PHONY : src/fasthessian.o
+
+# target to preprocess a source file
+src/fasthessian.i:
+	$(MAKE) -f CMakeFiles/surf_libs.dir/build.make CMakeFiles/surf_libs.dir/src/fasthessian.i
+.PHONY : src/fasthessian.i
+
+# target to generate assembly for a file
+src/fasthessian.s:
+	$(MAKE) -f CMakeFiles/surf_libs.dir/build.make CMakeFiles/surf_libs.dir/src/fasthessian.s
+.PHONY : src/fasthessian.s
+
+# target to build an object file
+src/integral.o:
+	$(MAKE) -f CMakeFiles/surf_libs.dir/build.make CMakeFiles/surf_libs.dir/src/integral.o
+.PHONY : src/integral.o
+
+# target to preprocess a source file
+src/integral.i:
+	$(MAKE) -f CMakeFiles/surf_libs.dir/build.make CMakeFiles/surf_libs.dir/src/integral.i
+.PHONY : src/integral.i
+
+# target to generate assembly for a file
+src/integral.s:
+	$(MAKE) -f CMakeFiles/surf_libs.dir/build.make CMakeFiles/surf_libs.dir/src/integral.s
+.PHONY : src/integral.s
+
+# target to build an object file
+src/ipoint.o:
+	$(MAKE) -f CMakeFiles/surf_libs.dir/build.make CMakeFiles/surf_libs.dir/src/ipoint.o
+.PHONY : src/ipoint.o
+
+# target to preprocess a source file
+src/ipoint.i:
+	$(MAKE) -f CMakeFiles/surf_libs.dir/build.make CMakeFiles/surf_libs.dir/src/ipoint.i
+.PHONY : src/ipoint.i
+
+# target to generate assembly for a file
+src/ipoint.s:
+	$(MAKE) -f CMakeFiles/surf_libs.dir/build.make CMakeFiles/surf_libs.dir/src/ipoint.s
+.PHONY : src/ipoint.s
+
+# target to build an object file
 src/people.o:
 	$(MAKE) -f CMakeFiles/people.dir/build.make CMakeFiles/people.dir/src/people.o
 .PHONY : src/people.o
@@ -373,6 +431,36 @@ src/people.i:
 src/people.s:
 	$(MAKE) -f CMakeFiles/people.dir/build.make CMakeFiles/people.dir/src/people.s
 .PHONY : src/people.s
+
+# target to build an object file
+src/surf.o:
+	$(MAKE) -f CMakeFiles/surf_libs.dir/build.make CMakeFiles/surf_libs.dir/src/surf.o
+.PHONY : src/surf.o
+
+# target to preprocess a source file
+src/surf.i:
+	$(MAKE) -f CMakeFiles/surf_libs.dir/build.make CMakeFiles/surf_libs.dir/src/surf.i
+.PHONY : src/surf.i
+
+# target to generate assembly for a file
+src/surf.s:
+	$(MAKE) -f CMakeFiles/surf_libs.dir/build.make CMakeFiles/surf_libs.dir/src/surf.s
+.PHONY : src/surf.s
+
+# target to build an object file
+src/utils.o:
+	$(MAKE) -f CMakeFiles/surf_libs.dir/build.make CMakeFiles/surf_libs.dir/src/utils.o
+.PHONY : src/utils.o
+
+# target to preprocess a source file
+src/utils.i:
+	$(MAKE) -f CMakeFiles/surf_libs.dir/build.make CMakeFiles/surf_libs.dir/src/utils.i
+.PHONY : src/utils.i
+
+# target to generate assembly for a file
+src/utils.s:
+	$(MAKE) -f CMakeFiles/surf_libs.dir/build.make CMakeFiles/surf_libs.dir/src/utils.s
+.PHONY : src/utils.s
 
 # Help Target
 help:
@@ -395,6 +483,7 @@ help:
 	@echo "... rospack_genmsg"
 	@echo "... rospack_genmsg_libexe"
 	@echo "... rospack_gensrv"
+	@echo "... surf_libs"
 	@echo "... test"
 	@echo "... test-future"
 	@echo "... test-results"
@@ -406,9 +495,24 @@ help:
 	@echo "... src/detect.o"
 	@echo "... src/detect.i"
 	@echo "... src/detect.s"
+	@echo "... src/fasthessian.o"
+	@echo "... src/fasthessian.i"
+	@echo "... src/fasthessian.s"
+	@echo "... src/integral.o"
+	@echo "... src/integral.i"
+	@echo "... src/integral.s"
+	@echo "... src/ipoint.o"
+	@echo "... src/ipoint.i"
+	@echo "... src/ipoint.s"
 	@echo "... src/people.o"
 	@echo "... src/people.i"
 	@echo "... src/people.s"
+	@echo "... src/surf.o"
+	@echo "... src/surf.i"
+	@echo "... src/surf.s"
+	@echo "... src/utils.o"
+	@echo "... src/utils.i"
+	@echo "... src/utils.s"
 .PHONY : help
 
 
