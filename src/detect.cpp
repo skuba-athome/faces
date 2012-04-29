@@ -97,10 +97,10 @@ int main(int argc,char * argv[])
 void convertmsg2img(const sensor_msgs::ImageConstPtr& msg)
 {
 	for(int i=0;i<640*480;i++)
-		{
-			imgRGB->imageData[i*3] = msg->data[i*3+2];
-			imgRGB->imageData[i*3+1] = msg->data[i*3+1];
-			imgRGB->imageData[i*3+2] = msg->data[i*3];
+	{
+		imgRGB->imageData[i*3] = msg->data[i*3+2];
+		imgRGB->imageData[i*3+1] = msg->data[i*3+1];
+		imgRGB->imageData[i*3+2] = msg->data[i*3];
     }
 	cvCvtColor ( imgRGB , img , CV_RGB2GRAY );
 }
