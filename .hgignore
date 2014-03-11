@@ -6,3 +6,5 @@ build
 bin
 *.tmp
 
+CMakeFiles
+CMakeCache.txt
