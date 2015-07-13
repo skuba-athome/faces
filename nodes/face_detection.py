@@ -16,6 +16,7 @@ class face_detector:
 
         face_cascade_file = rospy.get_param('~face_cascade_file', roslib.packages.get_pkg_dir('faces') + '/model/haarcascade_frontalface_default.xml')
         self.face_cascade = cv2.CascadeClassifier(face_cascade_file)
+        self.image_id = 0
 
         self.image_pub = rospy.Publisher("output",Image)
         rospy.init_node('face_detector')
@@ -28,11 +29,15 @@ class face_detector:
         except CvBridgeError, e:
             print e
 
-        small = cv2.resize(raw_image, (0,0), fx=0.5, fy=0.5)
+        small = cv2.resize(raw_image, (0,0), fx=0.6, fy=0.6)
         gray = cv2.cvtColor(small, cv2.COLOR_BGR2GRAY)
-        faces = self.face_cascade.detectMultiScale(gray, 1.1, 5)
+        faces = self.face_cascade.detectMultiScale(gray, scaleFactor=1.2, minNeighbors=4, minSize=2300)
         for (x,y,w,h) in faces:
             cv2.rectangle(small,(x,y),(x+w,y+h),(255,0,0),2)
+
+            self.image_id += 1
+            face_img = small[x:x+w, y:y+h]
+            cv2.imwrite('~/face/' + str(self.image_id)+'.jpg', face_img)
 
         try:
             self.image_pub.publish(self.bridge.cv2_to_imgmsg(small, "bgr8"))
