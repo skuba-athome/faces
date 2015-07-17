@@ -1,17 +1,20 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(hardware_bridge)
+project(faces)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  geometry_msgs
-  roscpp
-  rospy
-  sensor_msgs
-  tf
-  pcl_ros
-  pcl_conversions
+    geometry_msgs
+    roscpp
+    rospy
+    sensor_msgs
+    tf
+    cv_bridge
+    std_msgs
+    image_transport
+    pcl_ros
+    pcl_conversions
 
 #  cv_bridge
 #  image_transport
@@ -112,6 +115,8 @@ include_directories(
 ## Declare a cpp executable
 # add_executable(contrast_augmenter src/contrast_augmenter.cpp)
 # target_link_libraries(contrast_augmenter ${catkin_LIBRARIES})
+add_executable(face_detector src/face_detector.cpp)
+target_link_libraries(face_detector ${catkin_LIBRARIES})
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes

@@ -1,0 +1,11 @@
+<launch>
+
+    <node name="circle_detector" pkg="faces" type="circle.py" output="screen">
+        <remap from="image" to="/external_cam/image_raw"/>
+    </node>
+
+    <node name="circle_output" pkg="image_view" type="image_view">
+        <remap from="image" to="/output"/>
+    </node>
+
+</launch>
