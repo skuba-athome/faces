@@ -3,6 +3,7 @@
 import rospy
 import roslib
 from sensor_msgs.msg import Image
+from std_msgs.msg import String
 
 import os
 import cv2
@@ -25,6 +26,7 @@ class face_detector:
             os.makedirs(self.output_directory)
 
         self.image_pub = rospy.Publisher("output",Image)
+        self.face_pub = rospy.Publisher("face_output",String)
         rospy.init_node('face_detector')
         rospy.Subscriber('image', Image, self.process, queue_size=1)
         rospy.spin()
