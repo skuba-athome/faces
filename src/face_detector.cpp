@@ -5,6 +5,7 @@
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/image_encodings.h>
+#include <std_msgs/String.h>
 
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -16,6 +17,7 @@ class FaceDetector
     image_transport::ImageTransport it_;
     image_transport::Subscriber image_sub_;
     image_transport::Publisher image_pub_;
+    ros::Publisher face_pub_;
 
     cv::CascadeClassifier face_cascade;
     cv::Mat gray_im;
